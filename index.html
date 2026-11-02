@@ -44,7 +44,7 @@
   .meta b { color: var(--fg); }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
   .grid3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
-  .rings { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rings { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
   .note { color: var(--muted); font-size: 12px; }
   .ring { display: grid; justify-items: center; gap: 4px; text-align: center; padding: 12px 8px; }
@@ -71,7 +71,7 @@
   td { text-align: right; padding: 8px; border-bottom: 1px solid var(--line); }
   th.l, td.l { text-align: left; }
   td.easy { color: var(--rec-g); } td.moderate { color: var(--rec-y); } td.hard { color: var(--rec-r); }
-  @media (max-width: 560px) { .opt { display: none; } .rings { gap: 8px; } .ring { padding: 10px 4px; } .ring .sub { display: none; } }
+  @media (max-width: 560px) { .opt { display: none; } .rings { gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); } .ring { padding: 10px 4px; } }
   .setup { max-width: 34rem; margin: 8vh auto 0; display: grid; gap: 14px; }
   .setup ol { margin: 0; padding-left: 1.2em; color: var(--muted); display: grid; gap: 6px; }
   .setup ol b { color: var(--fg); }
@@ -110,6 +110,7 @@
     <section class="panel snap"><h2>Today at a glance</h2><p id="snapshot" class="snaptxt">—</p></section>
 
     <section class="rings">
+      <div class="panel ring"><div class="gauge" id="ring-bb"></div><div class="label">Body Battery</div><p class="sub">now · high <b id="bbhi">—</b></p></div>
       <div class="panel ring"><div class="gauge" id="ring-recovery"></div><div class="label">Recovery</div><p class="sub">7-day avg <b id="rec7">—</b>%</p></div>
       <div class="panel ring"><div class="gauge" id="ring-strain"></div><div class="label">Strain</div><p class="sub">7-day avg <b id="str7">—</b></p></div>
       <div class="panel ring"><div class="gauge" id="ring-sleep"></div><div class="label">Sleep</div><p class="sub"><b id="slh">—</b> h · <b id="slw">—</b></p></div>
@@ -325,6 +326,9 @@ function render() {
   $('slh').textContent = s.sleep_h_latest ?? '—'; $('slw').textContent = s.bedtime_latest ? `${s.bedtime_latest}–${s.wake_latest}` : '—';
   $('target').textContent = s.sleep_target_h;
   $('snapshot').textContent = s.snapshot || 'Waiting for the next sync.';
+  const bbc = s.bb_now == null ? 'var(--line)' : s.bb_now >= 60 ? 'var(--rec-g)' : s.bb_now >= 30 ? 'var(--rec-y)' : 'var(--rec-r)';
+  ring($('ring-bb'), s.bb_now, 100, bbc, s.bb_now == null ? '—' : String(s.bb_now), '');
+  $('bbhi').textContent = s.bb_high ?? '—';
   ring($('ring-recovery'), s.recovery_latest, 100, s.recovery_latest == null ? 'var(--line)' : recColor(s.recovery_latest), s.recovery_latest == null ? '—' : s.recovery_latest + '%', '');
   ring($('ring-strain'), s.strain_latest, 21, 'var(--strain)', s.strain_latest == null ? '—' : s.strain_latest.toFixed(1), '');
   ring($('ring-sleep'), s.sleep_perf_latest, 100, 'var(--sleep)', s.sleep_perf_latest == null ? '—' : s.sleep_perf_latest + '%', '');
