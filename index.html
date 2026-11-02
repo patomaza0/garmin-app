@@ -66,6 +66,21 @@
   .sw { width: .65rem; height: .65rem; border-radius: 50%; display: inline-block; }
   .sw.bar { border-radius: 2px; } .sw.ln { height: 3px; width: .9rem; border-radius: 2px; }
   .tbl { overflow: auto; max-height: 24rem; }
+  .lapt { max-height: none; }
+  .lapt table { font-size: 12px; } .lapt th, .lapt td { padding: 7px 5px; white-space: nowrap; }
+  .lapt th:first-child, .lapt td:first-child { padding-left: 0; }
+  .lr-kind { font-size: 20px; font-weight: 800; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 8px; }
+  .tile { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-width: 0; }
+  .tile .k { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 11px; color: var(--muted); }
+  .zk { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .zbar { margin-bottom: 6px; display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--line); }
+  .zbar i { display: block; height: 100%; }
+  .zchip { display: inline-block; min-width: 26px; text-align: center; border-radius: 6px; padding: 1px 6px; font-weight: 700; color: #07090c; }
+  tr.rep td { font-weight: 700; }
+  tr.recovery td, tr.cool-down td, tr.warm-up td { color: var(--muted); }
   table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
   th { text-align: right; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; color: var(--muted); position: sticky; top: 0; background: var(--panel); padding: 6px 8px; border-bottom: 1px solid var(--line); }
   td { text-align: right; padding: 8px; border-bottom: 1px solid var(--line); }
@@ -154,6 +169,22 @@
       </table></div>
     </section>
 
+    <section class="panel" id="lastrun" hidden>
+      <h2>Last run</h2>
+      <div class="lr-head"><div><div class="lr-kind" id="lr-kind">—</div><div class="meta" id="lr-when">—</div></div></div>
+      <p class="snaptxt" id="lr-summary">—</p>
+      <div class="tiles" id="lr-tiles"></div>
+      <div><div class="k zk">Heart-rate zones, whole run</div><div class="zbar" id="lr-zbar"></div><div class="legend" id="lr-zleg"></div></div>
+      <div class="legend"><span><i class="sw bar" style="background:var(--strain)"></i>Rep</span><span><i class="sw bar" style="background:#3a4654"></i>Recovery</span><span><i class="sw bar" style="background:var(--z1)"></i>Warm-up / cool-down / steady</span><span><i class="sw ln" style="background:var(--fg)"></i>Avg HR</span></div>
+      <p class="note">Bar height is pace (taller is faster), bar width is time spent in the lap.</p>
+      <div class="chart" id="chart-laps"></div>
+      <div class="tbl lapt"><table>
+        <thead><tr><th class="l">Lap</th><th>km</th><th>Time</th><th>Pace</th><th>Avg HR</th><th>Max HR</th><th>Zone</th><th>Cad.</th><th class="opt">Elev ±m</th></tr></thead>
+        <tbody id="laps"></tbody>
+      </table></div>
+      <p class="note">Zone uses each lap's average heart rate. On short reps the heart lags behind the effort, so max HR shows how hard a rep really got. Cad. is cadence in steps per minute.</p>
+    </section>
+
     <p class="note">Recovery combines resting heart rate against your 30-day normal (45%), sleep against the target (30%) and Body Battery (25%). Strain is the day's Garmin training load on a 0–21 scale. Both are this app's own scores in the style of WHOOP; the Forerunner 945 doesn't record overnight HRV.
       <button class="link" id="forget" type="button">Disconnect this device</button></p>
   </main>
@@ -195,6 +226,7 @@ async function loadData() {
   const parts = await Promise.all(FILES.map((f) => gh('/contents/dashboard/' + f + '.json?ref=main', { raw: true })));
   const d = {}; FILES.forEach((f, i) => { d[f] = JSON.parse(parts[i]); });
   d.state = JSON.parse(await gh('/contents/data/state.json?ref=main', { raw: true }));
+  try { d.last_run = JSON.parse(await gh('/contents/dashboard/last_run.json?ref=main', { raw: true })); } catch (e) { d.last_run = [null]; }
   return d;
 }
 async function lastSyncRun() {
@@ -345,12 +377,67 @@ function render() {
   sleepChart($('chart-sleep'), daily.slice(-30), s.sleep_target_h);
   rhrChart($('chart-rhr'), daily.slice(-90));
   effChart($('chart-eff'), runs.filter((r) => r.efficiency_comparable && r.efficiency));
+  renderLastRun((DATA.last_run || [null])[0]);
   $('runs').replaceChildren(...runs.slice().reverse().slice(0, 20).map((r) => {
     const tr = document.createElement('tr');
     [[d3.utcFormat('%-d %b %y')(D(r.date)), 'l'], [String(r.km)], [r.pace || ''], [r.avg_hr == null ? '' : String(r.avg_hr)], [r.intensity, 'l ' + r.intensity], [String(r.elev_gain_m), 'opt'],
       [r.decoupling_pct == null ? '' : (r.decoupling_pct > 0 ? '+' : '') + r.decoupling_pct]].forEach(([t, c]) => { const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); });
     return tr;
   }));
+}
+
+function renderLastRun(r) {
+  $('lastrun').hidden = !r; if (!r) return;
+  $('lr-kind').textContent = r.kind;
+  $('lr-when').textContent = `${d3.utcFormat('%a %-d %b')(D(r.date))} · ${r.start} · ${r.name || ''}`;
+  $('lr-summary').textContent = r.summary;
+  const tiles = [
+    ['Distance', r.km.toFixed(2) + ' km', ''], ['Time', r.time, ''], ['Avg pace', r.pace + '/km', r.rep_pace ? 'reps ' + r.rep_pace : ''],
+    ['Heart rate', r.avg_hr + ' bpm', 'max ' + r.max_hr], ['Cadence', r.cadence ? r.cadence + ' spm' : '—', ''],
+    ['Climb', '+' + (r.ascent ?? 0) + ' m', '−' + (r.descent ?? 0) + ' m'], ['Aerobic effect', r.te_aerobic == null ? '—' : r.te_aerobic.toFixed(1), r.te_aerobic_label || ''],
+    ['Anaerobic effect', r.te_anaerobic == null ? '—' : r.te_anaerobic.toFixed(1), r.te_anaerobic_label || ''], ['Calories', r.calories ?? '—', ''],
+    ['Training load', r.training_load ?? '—', 'Garmin'],
+  ];
+  $('lr-tiles').replaceChildren(...tiles.map(([k, v, sub]) => { const d = document.createElement('div'); d.className = 'tile';
+    d.innerHTML = '<div class="k"></div><div class="v"></div><div class="s"></div>'; d.children[0].textContent = k; d.children[1].textContent = v; d.children[2].textContent = sub; return d; }));
+  const zb = [['easy_pct', 'var(--z2)', 'Easy'], ['moderate_pct', 'var(--z3)', 'Moderate'], ['hard_pct', 'var(--rec-r)', 'Hard']];
+  $('lr-zbar').replaceChildren(...zb.filter(([k]) => r[k]).map(([k, c, n]) => { const i = document.createElement('i'); i.style.width = r[k] + '%'; i.style.background = c; i.title = `${n} ${r[k]}%`; return i; }));
+  $('lr-zleg').replaceChildren(...zb.map(([k, c, n]) => { const sp = document.createElement('span'); sp.innerHTML = '<i class="sw"></i>'; sp.firstChild.style.background = c; sp.append(`${n} ${Math.round(r[k] ?? 0)}%`); return sp; }));
+  lapChart($('chart-laps'), r.laps);
+  const zc = (z) => `var(--z${z})`;
+  $('laps').replaceChildren(...r.laps.map((l) => {
+    const tr = document.createElement('tr'); tr.className = l.type;
+    const cells = [[l.label, 'l'], [l.km.toFixed(2)], [l.time], [l.pace], [l.avg_hr ?? ''], [l.max_hr ?? ''], [null], [l.cadence ?? ''], [`+${l.ascent ?? 0} −${l.descent ?? 0}`, 'opt']];
+    cells.forEach(([t, c], i) => { const td = document.createElement('td'); if (c) td.className = c;
+      if (i === 6 && l.zone) { const sp = document.createElement('span'); sp.className = 'zchip'; sp.style.background = zc(l.zone); sp.textContent = 'Z' + l.zone; td.appendChild(sp); } else td.textContent = t ?? '';
+      tr.appendChild(td); });
+    return tr;
+  }));
+}
+
+function lapChart(el, laps) {
+  const H = 220, top = 12, bottom = 22, { svg, W } = svgIn(el, H);
+  let t = 0; const rows = laps.map((l) => { const o = { ...l, t0: t, t1: t + l.sec, v: 1000 / (l.pace_min_km * 60) }; t += l.sec; return o; });
+  const left = textW(svg, ['12:00']), right = textW(svg, ['200']);
+  const x = d3.scaleLinear([0, t], [left, W - right]);
+  const vmax = d3.max(rows, (r) => r.v), vmin = Math.max(0.5, d3.min(rows, (r) => r.v) * 0.85);
+  const y = d3.scaleLinear([vmin, vmax * 1.05], [H - bottom, top]);
+  const paceTicks = [3.5, 4, 4.5, 5, 6, 7, 8, 10, 12].map((p) => 1000 / (p * 60)).filter((v) => v >= vmin && v <= vmax * 1.05);
+  const g = svg.append('g');
+  g.selectAll('line').data(paceTicks).join('line').attr('x1', left).attr('x2', W - right).attr('y1', y).attr('y2', y).attr('stroke', 'var(--line)');
+  g.selectAll('text').data(paceTicks).join('text').attr('x', left - 6).attr('y', (v) => y(v) + 4).attr('text-anchor', 'end')
+    .text((v) => { const sec = Math.round(1000 / v); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; });
+  const col = (r) => (r.type === 'rep' ? 'var(--strain)' : r.type === 'recovery' ? '#3a4654' : 'var(--z1)');
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => x(r.t0) + 1).attr('width', (r) => Math.max(1, x(r.t1) - x(r.t0) - 2)).attr('y', (r) => y(r.v)).attr('height', (r) => y(vmin) - y(r.v)).attr('rx', 2)
+    .style('fill', col).append('title').text((r) => `${r.label}: ${r.pace}/km, ${r.avg_hr} bpm avg, ${r.max_hr} max`);
+  const hrs = rows.filter((r) => r.avg_hr), hmin = d3.min(hrs, (r) => r.avg_hr) - 10, hmax = d3.max(hrs, (r) => r.max_hr || r.avg_hr) + 5;
+  const yh = d3.scaleLinear([hmin, hmax], [H - bottom, top]);
+  svg.append('path').datum(hrs).attr('fill', 'none').attr('stroke', 'var(--fg)').attr('stroke-width', 2)
+    .attr('d', d3.line((r) => x((r.t0 + r.t1) / 2), (r) => yh(r.avg_hr)));
+  svg.append('g').selectAll('circle').data(hrs).join('circle').attr('cx', (r) => x((r.t0 + r.t1) / 2)).attr('cy', (r) => yh(r.avg_hr)).attr('r', 2.5).style('fill', 'var(--fg)');
+  svg.append('g').selectAll('text').data(yh.ticks(3)).join('text').attr('x', W - right + 6).attr('y', (d) => yh(d) + 4).text((d) => d);
+  svg.append('g').selectAll('text').data(d3.range(0, t, 600)).join('text').attr('x', (s) => x(s)).attr('y', H - 6).attr('text-anchor', 'middle').text((s) => s / 60 + "'");
 }
 
 function trend(el, rows) {
