@@ -39,6 +39,53 @@
   .sync.err .d { background: var(--rec-r); }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { .sync.busy .d { animation: none; } }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  .page { display: grid; gap: 14px; min-width: 0; }
+  .tabbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+    display: flex; gap: 4px; padding: 6px; border-radius: 999px; background: rgba(28, 34, 42, .72); border: 1px solid rgba(255,255,255,.08);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+  .tabbar button { display: grid; justify-items: center; gap: 2px; min-width: 96px; padding: 8px 14px; border: 0; border-radius: 999px; background: none; color: var(--fg); font: 600 12px/1.1 inherit; cursor: pointer; }
+  .tabbar button svg { width: 24px; height: 24px; }
+  .tabbar button.on { background: rgba(255,255,255,.1); color: var(--strain); }
+  .todaylink { text-align: left; cursor: pointer; color: var(--fg); font: inherit; }
+  .tl-k { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .tl-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .tl-t { font-size: 18px; font-weight: 800; }
+  .tl-more { font-size: 12px; color: var(--strain); }
+  .tp-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+  .tp-week { font-size: 22px; font-weight: 800; }
+  .tp-sum { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+  .tp-sum b { display: block; font-size: 17px; color: var(--fg); }
+  .tp-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .tp-day { display: grid; justify-items: center; gap: 4px; padding: 8px 2px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer; font: inherit; min-width: 0; }
+  .tp-day .wd { font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+  .tp-day .dd { font-size: 18px; font-weight: 800; color: var(--fg); }
+  .tp-day .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .tp-day.today .dd { color: var(--strain); }
+  .tp-day.sel { background: var(--fg); border-color: var(--fg); }
+  .tp-day.sel .wd, .tp-day.sel .dd { color: #07090c; }
+  .c-green { background: var(--rec-g) !important; } .c-yellow { background: var(--rec-y) !important; } .c-orange { background: #ff8a00 !important; }
+  .c-red { background: var(--rec-r) !important; } .c-plan { background: var(--muted) !important; } .c-rest { background: transparent !important; border: 1px solid var(--line); }
+  .tp-card { gap: 14px; }
+  .chart.tp-struct { height: auto; min-height: 0; aspect-ratio: auto; }
+  .mstatus { white-space: nowrap; }
+  .tp-top { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
+  .tp-date { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .tp-title { font-size: 26px; font-weight: 800; line-height: 1.15; }
+  .tp-metrics { display: flex; gap: 22px; flex-wrap: wrap; }
+  .tp-metrics div { font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .tp-metrics b { display: block; font-size: 24px; color: var(--fg); letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; }
+  .mstatus.c-green, .mstatus.c-yellow, .mstatus.c-orange, .mstatus.c-red { color: #07090c; }
+  .tp-list { display: grid; gap: 8px; }
+  .tp-item { display: grid; grid-template-columns: 3.2rem 6px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+  .tp-item.sel { border-color: var(--strain); }
+  .tp-item .when { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; line-height: 1.3; }
+  .tp-item .when b { display: block; font-size: 16px; color: var(--fg); }
+  .tp-item .bar { width: 6px; align-self: stretch; border-radius: 3px; }
+  .tp-item .t { font-weight: 700; } .tp-item .sub { font-size: 12px; color: var(--muted); }
+  .tp-item .r { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+  .tp-item .r b { display: block; font-size: 14px; color: var(--fg); }
+  @media (max-width: 560px) { .tabbar button { min-width: 84px; } .tp-title { font-size: 22px; } .tp-day .dd { font-size: 16px; } }
   .menu-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .mstatus { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: var(--line); color: var(--muted); }
   .mstatus.done { background: var(--rec-g); color: #07090c; }
@@ -141,14 +188,12 @@
     <p class="meta"><b id="days">—</b> days to race day · data up to <span id="asof">—</span></p>
     <p class="warnline" id="watchsync" hidden></p>
 
-    <section class="panel" id="menu" hidden>
-      <div class="menu-top"><h2>Today's menu</h2><span class="mstatus" id="m-status"></span></div>
-      <div class="lr-kind" id="m-title">—</div>
-      <p class="meta" id="m-sum"></p>
-      <ol class="msteps" id="m-steps"></ol>
-      <p class="mafter" id="m-after"></p>
-      <div class="mweek" id="m-week"></div>
-    </section>
+    <div class="page" id="pg-overview">
+    <button class="panel todaylink" id="todaylink" type="button" hidden>
+      <span class="tl-k">Today's menu</span>
+      <span class="tl-row"><span class="tl-t" id="tl-title">—</span><span class="mstatus" id="tl-status"></span></span>
+      <span class="tl-more">Open in Training →</span>
+    </button>
 
     <section class="panel snap"><h2>Today at a glance</h2><p id="snapshot" class="snaptxt">—</p></section>
 
@@ -215,7 +260,30 @@
 
     <p class="note">Recovery combines resting heart rate against your 30-day normal (45%), sleep against the target (30%) and Body Battery (25%). Strain is the day's Garmin training load on a 0–21 scale. Both are this app's own scores in the style of WHOOP; the Forerunner 945 doesn't record overnight HRV.
       <button class="link" id="forget" type="button">Disconnect this device</button></p>
+    </div>
+
+    <div class="page" id="pg-training" hidden>
+      <div class="tp-head"><div><h2>Training</h2><div class="tp-week" id="tp-week">—</div></div>
+        <div class="tp-sum" id="tp-sum"></div></div>
+      <div class="tp-strip" id="tp-strip" role="tablist" aria-label="Days of the week"></div>
+      <section class="panel tp-card" id="tp-card">
+        <div class="tp-top"><div><div class="tp-date" id="tp-date">—</div><div class="tp-title" id="tp-title">—</div></div><span class="mstatus" id="tp-status"></span></div>
+        <div class="tp-metrics" id="tp-metrics"></div>
+        <div id="tp-structure-wrap"><div class="zk">Workout structure</div><div class="chart tp-struct" id="tp-structure"></div>
+          <div class="legend" id="tp-ilegend"></div></div>
+        <p class="snaptxt" id="tp-summary"></p>
+        <ol class="msteps" id="tp-steps"></ol>
+        <p class="mafter" id="tp-after"></p>
+        <div id="tp-actual-wrap" hidden><div class="zk">Completed</div><div class="tiles" id="tp-actual"></div></div>
+      </section>
+      <section class="panel"><h2>This week</h2><div class="tp-list" id="tp-list"></div></section>
+      <p class="note">Compliance compares what you did with what was planned, like TrainingPeaks: green 80–120%, yellow 50–79% or 121–150%, orange under 50% or over 150%, red missed. Intensity levels in the structure chart are a reading of the plan's wording (easy, moderate, recovery), not heart-rate targets.</p>
+    </div>
   </main>
+  <nav class="tabbar" id="tabbar" hidden aria-label="Pages">
+    <button type="button" data-tab="overview" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><span>Overview</span></button>
+    <button type="button" data-tab="training"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 15l2.5 2 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Training</span></button>
+  </nav>
 </div>
 
 <script>
@@ -304,6 +372,7 @@ async function waitForRun(id) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function cacheAndRender() { store.set('pulse_cache', JSON.stringify(DATA)); render(); }
+let _tabInit = false;
 
 // ---------- setup
 function showSetup(msg) { $('setup').hidden = false; $('main').hidden = !DATA; $('setup-err').hidden = !msg; $('setup-err').textContent = msg || ''; }
@@ -382,6 +451,8 @@ const mins = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} mi
 function render() {
   const s = DATA.status[0], daily = DATA.daily, weekly = DATA.weekly, runs = DATA.runs;
   $('main').hidden = false; $('setup').hidden = true;
+  if (!_tabInit) { _tabInit = true; $('pg-overview').hidden = TAB !== 'overview'; $('pg-training').hidden = TAB !== 'training';
+    document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.tab === TAB)); }
   $('days').textContent = s.days_to_race; $('asof').textContent = fmtDate(s.as_of);
   $('rec7').textContent = s.recovery_7d ?? '—'; $('str7').textContent = s.strain_7d ?? '—';
   $('slh').textContent = s.sleep_h_latest ?? '—'; $('slw').textContent = s.bedtime_latest ? `${s.bedtime_latest}–${s.wake_latest}` : '—';
@@ -418,7 +489,7 @@ function render() {
   rhrChart($('chart-rhr'), daily.slice(-90));
   effChart($('chart-eff'), runs.filter((r) => r.efficiency_comparable && r.efficiency));
   renderLastRun((DATA.last_run || [null])[0]);
-  renderMenu(DATA.plan, daily);
+  renderTraining(DATA.plan, daily, runs);
   $('runs').replaceChildren(...runs.slice().reverse().slice(0, 20).map((r) => {
     const tr = document.createElement('tr');
     [[d3.utcFormat('%-d %b %y')(D(r.date)), 'l'], [String(r.km)], [r.pace || ''], [r.avg_hr == null ? '' : String(r.avg_hr)], [r.intensity, 'l ' + r.intensity], [String(r.elev_gain_m), 'opt'],
@@ -431,6 +502,120 @@ function madridToday() {
   const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   return p; // YYYY-MM-DD
 }
+// ---------- pages
+let TAB = store.get('pulse_tab') || 'overview';
+function setTab(t, keepScroll) {
+  TAB = t; store.set('pulse_tab', t);
+  $('pg-overview').hidden = t !== 'overview'; $('pg-training').hidden = t !== 'training';
+  document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+  if (!keepScroll) window.scrollTo({ top: 0 });
+  if (DATA) render();
+}
+document.querySelectorAll('.tabbar button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$('todaylink').addEventListener('click', () => { SEL = madridToday(); setTab('training'); });
+(function swipe() {
+  let x0 = null, y0 = null, skip = false;
+  document.addEventListener('touchstart', (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; skip = !!e.target.closest('.tbl, .tp-strip'); }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (x0 == null || skip || $('main').hidden) return; const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0; x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 40) { if (dx < 0 && TAB === 'overview') setTab('training'); else if (dx > 0 && TAB === 'training') setTab('overview'); }
+  }, { passive: true });
+})();
+
+let SEL = null;
+const INT_COL = { 1: '#4b6378', 2: 'var(--z2)', 3: 'var(--z3)', 4: 'var(--z4)', 5: 'var(--rec-r)' };
+function dayActual(date, runs, daily) {
+  const rs = runs.filter((r) => r.date === date), drow = daily.find((d) => d.date === date);
+  if (!rs.length) return { gym: drow && drow.strength_min };
+  const km = rs.reduce((a, r) => a + r.km, 0), min = rs.reduce((a, r) => a + r.minutes, 0);
+  const hr = rs.every((r) => r.avg_hr) ? Math.round(rs.reduce((a, r) => a + r.avg_hr * r.minutes, 0) / min) : null;
+  const p = min / km;
+  return { km, min, hr, pace: `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2, '0')}`, load: rs.reduce((a, r) => a + (r.training_load || 0), 0), gym: drow && drow.strength_min, n: rs.length };
+}
+function compliance(day, act, date, today) {
+  if (day.type === 'rest') return act.km ? { cls: 'c-plan', label: 'Extra run' } : { cls: 'c-rest', label: 'Rest' };
+  if (!act.km) return date < today ? { cls: 'c-red', label: 'Missed' } : { cls: 'c-plan', label: date === today ? 'Planned today' : 'Planned' };
+  const pct = day.planned_km ? act.km / day.planned_km * 100 : day.planned_min ? act.min / day.planned_min * 100 : 100;
+  const cls = pct >= 80 && pct <= 120 ? 'c-green' : (pct >= 50 && pct < 80) || (pct > 120 && pct <= 150) ? 'c-yellow' : 'c-orange';
+  return { cls, label: `Done · ${Math.round(pct)}%`, pct };
+}
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')} h` : `${Math.round(m)} min`);
+function renderTraining(plan, daily, runs) {
+  $('todaylink').hidden = !plan; $('tabbar').hidden = false;
+  if (!plan) { $('pg-training').replaceChildren(Object.assign(document.createElement('p'), { className: 'note', textContent: 'No training plan loaded yet.' })); return; }
+  const today = madridToday(), td = D(today), dow = ((td.getUTCDay() + 6) % 7) + 1;
+  const monday = new Date(td.getTime() - (dow - 1) * 864e5);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const week = [1, 2, 3, 4, 5, 6, 7].map((i) => { const date = iso(new Date(monday.getTime() + (i - 1) * 864e5)), day = plan.days[String(i)], act = dayActual(date, runs, daily);
+    return { i, date, day, act, comp: compliance(day, act, date, today) }; });
+  if (!SEL || !week.some((w) => w.date === SEL)) SEL = today;
+  // overview link
+  const tw = week[dow - 1]; $('tl-title').textContent = tw.day.title;
+  $('tl-status').className = 'mstatus ' + (tw.comp.cls.startsWith('c-') && !['c-plan', 'c-rest'].includes(tw.comp.cls) ? tw.comp.cls : ''); $('tl-status').textContent = tw.comp.label;
+  // header + summary
+  $('tp-week').textContent = 'Week of ' + d3.utcFormat('%-d %b')(monday);
+  const sessions = week.filter((w) => w.day.type !== 'rest'), done = sessions.filter((w) => w.act.km);
+  const kmDone = week.reduce((a, w) => a + (w.act.km || 0), 0), minDone = week.reduce((a, w) => a + (w.act.min || 0), 0);
+  $('tp-sum').innerHTML = '';
+  [['Sessions', `${done.length}/${sessions.length}`], ['Distance', kmDone.toFixed(1) + ' km'], ['Time', fmtMin(minDone)]].forEach(([k, v]) => {
+    const d = document.createElement('div'); d.textContent = k; const b = document.createElement('b'); b.textContent = v; d.prepend(b); $('tp-sum').appendChild(d); });
+  // strip
+  $('tp-strip').replaceChildren(...week.map((w) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tp-day' + (w.date === today ? ' today' : '') + (w.date === SEL ? ' sel' : '');
+    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', w.date === SEL);
+    b.innerHTML = '<span class="wd"></span><span class="dd"></span><span class="dot"></span>';
+    b.children[0].textContent = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'][w.i - 1]; b.children[1].textContent = D(w.date).getUTCDate();
+    b.children[2].classList.add(w.comp.cls); b.addEventListener('click', () => { SEL = w.date; renderTraining(plan, daily, runs); });
+    return b; }));
+  // selected day card
+  const w = week.find((x) => x.date === SEL), day = w.day;
+  $('tp-date').textContent = (w.date === today ? 'Today · ' : '') + d3.utcFormat('%A %-d %B')(D(w.date));
+  $('tp-title').textContent = day.title;
+  const st = $('tp-status'); st.className = 'mstatus ' + (['c-green', 'c-yellow', 'c-orange', 'c-red'].includes(w.comp.cls) ? w.comp.cls : ''); st.textContent = w.comp.label;
+  const met = [];
+  if (day.planned_min) met.push(['Planned', fmtMin(day.planned_min)]);
+  if (day.planned_km) met.push(['Planned', day.planned_km + ' km']);
+  if (day.type === 'intervals') { const on = day.blocks.filter((b) => b[2] >= 4); met.push(['Reps', `${on.length} × ${on[0][1]} min`]); }
+  if (w.act.km) { met.push(['Done', w.act.km.toFixed(1) + ' km']); met.push(['Time', fmtMin(w.act.min)]); }
+  $('tp-metrics').replaceChildren(...met.map(([k, v]) => { const d = document.createElement('div'); d.textContent = k; const b = document.createElement('b'); b.textContent = v; d.appendChild(b); return d; }));
+  $('tp-structure-wrap').hidden = !day.blocks.length;
+  if (day.blocks.length) {
+    structureChart($('tp-structure'), day.blocks, day.blocks_unit || 'min');
+    const used = [...new Set(day.blocks.map((b) => b[2]))].sort();
+    $('tp-ilegend').replaceChildren(...used.map((k) => { const sp = document.createElement('span'); sp.innerHTML = '<i class="sw bar"></i>'; sp.firstChild.style.background = INT_COL[k]; sp.append(plan.intensity_legend[k]); return sp; }));
+  }
+  $('tp-summary').textContent = day.summary || '';
+  $('tp-steps').replaceChildren(...day.steps.map(([k, v]) => { const li = document.createElement('li'); li.innerHTML = '<b></b><span></span>'; li.children[0].textContent = k; li.children[1].textContent = v; return li; }));
+  $('tp-after').textContent = day.type === 'rest' ? '' : plan.after_every_session;
+  $('tp-actual-wrap').hidden = !w.act.km && !w.act.gym;
+  const tiles = [];
+  if (w.act.km) tiles.push(['Distance', w.act.km.toFixed(2) + ' km', ''], ['Time', fmtMin(w.act.min), ''], ['Avg pace', w.act.pace + '/km', ''], ['Avg HR', w.act.hr ? w.act.hr + ' bpm' : '—', ''], ['Training load', String(Math.round(w.act.load)), 'Garmin']);
+  if (w.act.gym) tiles.push(['Gym', Math.round(w.act.gym) + ' min', 'Strength']);
+  $('tp-actual').replaceChildren(...tiles.map(([k, v, sub]) => { const d = document.createElement('div'); d.className = 'tile'; d.innerHTML = '<div class="k"></div><div class="v"></div><div class="s"></div>'; d.children[0].textContent = k; d.children[1].textContent = v; d.children[2].textContent = sub; return d; }));
+  // week list
+  $('tp-list').replaceChildren(...week.map((x) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tp-item' + (x.date === SEL ? ' sel' : '');
+    b.innerHTML = '<div class="when"></div><div class="bar"></div><div><div class="t"></div><div class="sub"></div></div><div class="r"></div>';
+    b.children[0].innerHTML = '<span></span><b></b>'; b.children[0].children[0].textContent = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][x.i - 1]; b.children[0].children[1].textContent = D(x.date).getUTCDate();
+    b.children[1].classList.add(x.comp.cls); b.children[2].children[0].textContent = x.day.title;
+    b.children[2].children[1].textContent = x.day.type === 'rest' ? (x.act.gym ? `Gym ${Math.round(x.act.gym)} min` : 'Rest day') :
+      (x.day.planned_min ? 'Planned ' + fmtMin(x.day.planned_min) : 'Planned ' + x.day.planned_km + ' km') + (x.act.gym ? ` · Gym ${Math.round(x.act.gym)} min` : '');
+    b.children[3].innerHTML = '<b></b><span></span>'; b.children[3].children[0].textContent = x.act.km ? x.act.km.toFixed(1) + ' km' : ''; b.children[3].children[1].textContent = x.comp.label;
+    b.addEventListener('click', () => { SEL = x.date; renderTraining(plan, daily, runs); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    return b; }));
+}
+function structureChart(el, blocks, unit) {
+  const H = 120, bottom = 20, top = 6, { svg, W } = svgIn(el, H);
+  const total = blocks.reduce((a, b) => a + b[1], 0), x = d3.scaleLinear([0, total], [0, W]), y = d3.scaleLinear([0, 5], [H - bottom, top]);
+  let t = 0; const rows = blocks.map((b) => { const o = { name: b[0], len: b[1], lvl: b[2], t0: t }; t += b[1]; return o; });
+  svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', (r) => x(r.t0) + 0.5).attr('width', (r) => Math.max(1, x(r.t0 + r.len) - x(r.t0) - 1))
+    .attr('y', (r) => y(r.lvl)).attr('height', (r) => y(0) - y(r.lvl)).attr('rx', 2).style('fill', (r) => INT_COL[r.lvl])
+    .append('title').text((r) => `${r.name}: ${r.len} ${unit}`);
+  const step = unit === 'km' ? (total > 10 ? 5 : 1) : 15;
+  svg.append('g').selectAll('text').data(d3.range(0, total + 0.01, step)).join('text').attr('x', (v) => Math.min(W - 12, Math.max(8, x(v)))).attr('y', H - 4).attr('text-anchor', 'middle')
+    .text((v) => v + (unit === 'km' ? ' km' : "'"));
+}
+
 function renderMenu(plan, daily) {
   $('menu').hidden = !plan; if (!plan) return;
   const today = madridToday(), td = D(today), dow = ((td.getUTCDay() + 6) % 7) + 1;
