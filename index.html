@@ -39,6 +39,22 @@
   .sync.err .d { background: var(--rec-r); }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { .sync.busy .d { animation: none; } }
+  .menu-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .mstatus { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: var(--line); color: var(--muted); }
+  .mstatus.done { background: var(--rec-g); color: #07090c; }
+  .msteps { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .msteps li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .msteps b { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--strain); padding-top: 2px; }
+  .mafter { margin: 0; font-size: 13px; color: var(--muted); }
+  .mweek { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .mday { border: 1px solid var(--line); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 11px; color: var(--muted); min-width: 0; }
+  .mday .dn { font-weight: 800; color: var(--fg); font-size: 12px; }
+  .mday .dt { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mday.today { border-color: var(--strain); box-shadow: inset 0 0 0 1px var(--strain); }
+  .mday.done .dt { color: var(--rec-g); font-weight: 700; }
+  .mday.missed .dt { color: var(--rec-r); }
+  .mday.rest { opacity: .6; }
+  @media (max-width: 560px) { .msteps li { grid-template-columns: 1fr; gap: 2px; } }
   .warnline { margin: 0; font-size: 13px; color: var(--muted); }
   .warnline.stale { color: var(--rec-y); }
   .snaptxt { margin: 0; font-size: 15px; line-height: 1.55; }
@@ -124,6 +140,15 @@
   <main class="wrap" id="main" hidden>
     <p class="meta"><b id="days">—</b> days to race day · data up to <span id="asof">—</span></p>
     <p class="warnline" id="watchsync" hidden></p>
+
+    <section class="panel" id="menu" hidden>
+      <div class="menu-top"><h2>Today's menu</h2><span class="mstatus" id="m-status"></span></div>
+      <div class="lr-kind" id="m-title">—</div>
+      <p class="meta" id="m-sum"></p>
+      <ol class="msteps" id="m-steps"></ol>
+      <p class="mafter" id="m-after"></p>
+      <div class="mweek" id="m-week"></div>
+    </section>
 
     <section class="panel snap"><h2>Today at a glance</h2><p id="snapshot" class="snaptxt">—</p></section>
 
@@ -229,6 +254,7 @@ async function loadData() {
   const parts = await Promise.all(FILES.map((f) => gh('/contents/dashboard/' + f + '.json?ref=main', { raw: true })));
   const d = {}; FILES.forEach((f, i) => { d[f] = JSON.parse(parts[i]); });
   d.state = JSON.parse(await gh('/contents/data/state.json?ref=main', { raw: true }));
+  try { d.plan = JSON.parse(await gh('/contents/plan/week.json?ref=main', { raw: true })); } catch (e) { d.plan = null; }
   try { d.last_run = JSON.parse(await gh('/contents/dashboard/last_run.json?ref=main', { raw: true })); } catch (e) { d.last_run = [null]; }
   return d;
 }
@@ -392,11 +418,45 @@ function render() {
   rhrChart($('chart-rhr'), daily.slice(-90));
   effChart($('chart-eff'), runs.filter((r) => r.efficiency_comparable && r.efficiency));
   renderLastRun((DATA.last_run || [null])[0]);
+  renderMenu(DATA.plan, daily);
   $('runs').replaceChildren(...runs.slice().reverse().slice(0, 20).map((r) => {
     const tr = document.createElement('tr');
     [[d3.utcFormat('%-d %b %y')(D(r.date)), 'l'], [String(r.km)], [r.pace || ''], [r.avg_hr == null ? '' : String(r.avg_hr)], [r.intensity, 'l ' + r.intensity], [String(r.elev_gain_m), 'opt'],
       [r.decoupling_pct == null ? '' : (r.decoupling_pct > 0 ? '+' : '') + r.decoupling_pct]].forEach(([t, c]) => { const td = document.createElement('td'); td.textContent = t; if (c) td.className = c; tr.appendChild(td); });
     return tr;
+  }));
+}
+
+function madridToday() {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  return p; // YYYY-MM-DD
+}
+function renderMenu(plan, daily) {
+  $('menu').hidden = !plan; if (!plan) return;
+  const today = madridToday(), td = D(today), dow = ((td.getUTCDay() + 6) % 7) + 1;
+  const monday = new Date(td.getTime() - (dow - 1) * 864e5);
+  const byDate = Object.fromEntries(daily.map((r) => [r.date, r]));
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const day = plan.days[String(dow)];
+  $('m-title').textContent = day.title; $('m-sum').textContent = day.summary || '';
+  $('m-steps').replaceChildren(...day.steps.map(([k, v]) => { const li = document.createElement('li'); li.innerHTML = '<b></b><span></span>'; li.children[0].textContent = k; li.children[1].textContent = v; return li; }));
+  $('m-after').textContent = day.type === 'rest' ? '' : plan.after_every_session;
+  const r = byDate[today], st = $('m-status');
+  if (day.type === 'rest') { st.className = 'mstatus'; st.textContent = 'Rest day'; }
+  else if (r && r.run_km) { st.className = 'mstatus done'; st.textContent = `Done · ${r.run_km.toFixed(1)} km`; }
+  else { st.className = 'mstatus'; st.textContent = 'Not done yet'; }
+  const shortT = (d) => d.type === 'rest' ? 'Rest' : d.type === 'long' ? ((d.title.match(/(\d+)\s*km/) || [0, 'Long'])[1] + 'k') : d.type === 'steady' ? ((d.title.match(/(\d+)\s*min/) || [0, 'Run'])[1] + '′') : (d.title.match(/\d+ min on/) ? d.title.match(/(\d+) min on/)[1] + '/' + d.title.match(/(\d+) min off/)[1] : 'Int');
+  $('m-week').replaceChildren(...[1, 2, 3, 4, 5, 6, 7].map((i) => {
+    const d = plan.days[String(i)], date = iso(new Date(monday.getTime() + (i - 1) * 864e5)), row = byDate[date];
+    const el = document.createElement('div'); let cls = 'mday', txt = shortT(d);
+    if (d.type === 'rest') cls += ' rest';
+    else if (row && row.run_km) { cls += ' done'; txt = row.run_km.toFixed(1) + 'k'; }
+    else if (date < today) cls += ' missed';
+    if (date === today) cls += ' today';
+    el.className = cls; el.title = d.title;
+    el.innerHTML = '<div class="dn"></div><div class="dt"></div>';
+    el.children[0].textContent = ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i - 1]; el.children[1].textContent = txt;
+    return el;
   }));
 }
 
