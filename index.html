@@ -39,6 +39,8 @@
   .sync.err .d { background: var(--rec-r); }
   @keyframes pulse { 50% { opacity: .25; } }
   @media (prefers-reduced-motion: reduce) { .sync.busy .d { animation: none; } }
+  .warnline { margin: 0; font-size: 13px; color: var(--muted); }
+  .warnline.stale { color: var(--rec-y); }
   .snaptxt { margin: 0; font-size: 15px; line-height: 1.55; }
   .meta { color: var(--muted); font-size: 12px; }
   .meta b { color: var(--fg); }
@@ -121,6 +123,7 @@
 
   <main class="wrap" id="main" hidden>
     <p class="meta"><b id="days">—</b> days to race day · data up to <span id="asof">—</span></p>
+    <p class="warnline" id="watchsync" hidden></p>
 
     <section class="panel snap"><h2>Today at a glance</h2><p id="snapshot" class="snaptxt">—</p></section>
 
@@ -357,6 +360,17 @@ function render() {
   $('rec7').textContent = s.recovery_7d ?? '—'; $('str7').textContent = s.strain_7d ?? '—';
   $('slh').textContent = s.sleep_h_latest ?? '—'; $('slw').textContent = s.bedtime_latest ? `${s.bedtime_latest}–${s.wake_latest}` : '—';
   $('target').textContent = s.sleep_target_h;
+  (function () {
+    const el = $('watchsync'); if (!s.watch_sync_time) { el.hidden = true; return; }
+    const [h, m] = s.watch_sync_time.split(':').map(Number);
+    const now = new Date(), madrid = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+    const todayStr = madrid.toISOString().slice(0, 10);
+    const isToday = s.watch_sync_date === `${madrid.getFullYear()}-${String(madrid.getMonth() + 1).padStart(2, '0')}-${String(madrid.getDate()).padStart(2, '0')}`;
+    const hrs = isToday ? (madrid.getHours() * 60 + madrid.getMinutes() - (h * 60 + m)) / 60 : 99;
+    el.hidden = false; el.className = 'warnline' + (hrs > 2 ? ' stale' : '');
+    el.textContent = `Watch last uploaded to Garmin at ${s.watch_sync_time}${isToday ? '' : ' (' + s.watch_sync_date + ')'}` +
+      (hrs > 2 ? '. Open Garmin Connect on your phone to sync the watch, then tap the badge.' : '.');
+  })();
   $('snapshot').textContent = s.snapshot || 'Waiting for the next sync.';
   const bbc = s.bb_now == null ? 'var(--line)' : s.bb_now >= 60 ? 'var(--rec-g)' : s.bb_now >= 30 ? 'var(--rec-y)' : 'var(--rec-r)';
   ring($('ring-bb'), s.bb_now, 100, bbc, s.bb_now == null ? '—' : String(s.bb_now), '');
