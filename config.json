@@ -1,0 +1,10 @@
+{
+ "_help": "Your personal settings. Edit the values, keep the quotes. Timezone names: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones",
+ "timezone": "America/New_York",
+ "race_name": "Goal race",
+ "race_date": "2027-06-06",
+ "race_km": 42.195,
+ "target_peak_week_km": 40.0,
+ "target_long_run_km": 28.0,
+ "sleep_target_h": 8.0
+}

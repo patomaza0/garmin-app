@@ -1,0 +1,63 @@
+name: Sync Garmin data
+
+on:
+  schedule:
+    # Every day at 05:47 UTC. Opening the app also starts a sync, so the exact time matters little.
+    - cron: "47 5 * * *"
+  workflow_dispatch:
+    inputs:
+      backfill_days:
+        description: "Days of history to backfill (only used on the first run or when forcing)"
+        default: "365"
+      force_backfill:
+        description: "Re-download the whole backfill window"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: garmin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # The public template repository only hosts the app; the sync runs in each person's own private copy.
+    if: github.repository != 'patomaza0/garmin-app'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Garmin's official Personal API client
+        run: pip install -r sync/requirements.txt
+
+      - name: Fetch data from Garmin
+        env:
+          GARMIN_PERSONAL_API_KEY: ${{ secrets.GARMIN_PERSONAL_API_KEY }}
+          BACKFILL_DAYS: ${{ inputs.backfill_days }}
+          FORCE_BACKFILL: ${{ inputs.force_backfill }}
+        run: python sync/fetch.py
+
+      - name: Analyse the data for the dashboard
+        if: success()
+        run: python analysis/analyze.py
+
+      - name: Save new data to the repository
+        if: always()
+        run: |
+          git config user.name "garmin-sync"
+          git config user.email "garmin-sync@users.noreply.github.com"
+          [ -d data ] || { echo "No data yet."; exit 0; }
+          git add data dashboard 2>/dev/null || git add data
+          if git diff --cached --quiet; then
+            echo "No new data."
+          else
+            git commit -m "Garmin sync $(date -u +%Y-%m-%d)"
+            git push
+          fi

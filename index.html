@@ -104,6 +104,7 @@
   @media (max-width: 560px) { .msteps li { grid-template-columns: 1fr; gap: 2px; } }
   .warnline { margin: 0; font-size: 13px; color: var(--muted); }
   .warnline.stale { color: var(--rec-y); }
+  .flabel { font-size: 12px; font-weight: 700; color: var(--muted); }
   .snaptxt { margin: 0; font-size: 15px; line-height: 1.55; }
   .meta { color: var(--muted); font-size: 12px; }
   .meta b { color: var(--fg); }
@@ -172,13 +173,16 @@
 
   <section class="setup panel" id="setup" hidden>
     <h2>Connect to your data</h2>
-    <p>This app reads your private <b>garmin-data</b> repository with a GitHub access token. You only do this once per device; the token stays on this device.</p>
+    <p>This app reads your own private <b>garmin-data</b> repository with a GitHub access token. You only do this once per device; the token stays on this device.</p>
+    <label class="flabel" for="repo">Your data repository</label>
+    <input type="text" id="repo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="your-github-username/garmin-data" aria-label="Data repository">
     <ol>
       <li>Open <b>github.com/settings/personal-access-tokens/new</b> (Fine-grained token).</li>
       <li>Name it <b>Pulse app</b>, expiration up to 1 year, <b>Only select repositories</b> → <b>garmin-data</b>.</li>
       <li>Repository permissions: <b>Contents: Read-only</b> and <b>Actions: Read and write</b>. Nothing else.</li>
       <li>Generate, copy, paste below.</li>
     </ol>
+    <label class="flabel" for="token">GitHub token</label>
     <input type="password" id="token" autocomplete="off" placeholder="github_pat_…" aria-label="GitHub token">
     <button class="btn" id="save" type="button">Save and load</button>
     <p class="err" id="setup-err" hidden></p>
@@ -263,6 +267,7 @@
     </div>
 
     <div class="page" id="pg-training" hidden>
+      <section class="panel" id="tp-empty" hidden><h2>Training</h2><p class="snaptxt">No training plan yet. Add your weekly plan as <b>plan/week.json</b> in your data repository and it shows up here.</p></section>
       <div class="tp-head"><div><h2>Training</h2><div class="tp-week" id="tp-week">—</div></div>
         <div class="tp-sum" id="tp-sum"></div></div>
       <div class="tp-strip" id="tp-strip" role="tablist" aria-label="Days of the week"></div>
@@ -287,8 +292,10 @@
 </div>
 
 <script>
-const REPO = 'patomaza0/garmin-data';
-const API = 'https://api.github.com/repos/' + REPO;
+// Which data repository to read. Set on the setup screen (or ?repo=owner/name in the link);
+// devices set up before this option existed keep reading the original repository.
+let REPO = null, API = null;
+function setRepo(r) { REPO = r; API = 'https://api.github.com/repos/' + r; }
 const FILES = ['status', 'daily', 'weekly', 'runs'];
 const STALE_MIN = 30; // trigger a Garmin sync if the last one is older than this
 const store = {
@@ -298,6 +305,14 @@ const store = {
 };
 const $ = (id) => document.getElementById(id);
 let DATA = null, busy = false;
+(function initRepo() {
+  const q = new URLSearchParams(location.search).get('repo');
+  const valid = (r) => /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(r || '');
+  let r = store.get('pulse_repo');
+  if (!r && store.get('pulse_token')) r = 'patomaza0/garmin-data'; // set up before the repo option existed
+  if (valid(q) && q !== r) { if (r) { store.del('pulse_token'); store.del('pulse_cache'); } r = null; $('repo').value = q; }
+  if (valid(r)) { setRepo(r); $('repo').value = r; }
+})();
 
 // ---------- status pill
 function pill(state, text) {
@@ -377,10 +392,13 @@ let _tabInit = false;
 // ---------- setup
 function showSetup(msg) { $('setup').hidden = false; $('main').hidden = !DATA; $('setup-err').hidden = !msg; $('setup-err').textContent = msg || ''; }
 $('save').addEventListener('click', () => {
-  const t = $('token').value.trim(); if (!t) return;
-  store.set('pulse_token', t); $('token').value = ''; $('setup').hidden = true; $('main').hidden = false; refresh(false);
+  const t = $('token').value.trim(), r = $('repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+  if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(r)) { showSetup('Write the repository as username/garmin-data.'); return; }
+  if (!t) { showSetup('Paste your GitHub token.'); return; }
+  if (r !== REPO) { store.del('pulse_cache'); DATA = null; }
+  setRepo(r); store.set('pulse_repo', r); store.set('pulse_token', t); $('token').value = ''; $('setup').hidden = true; $('main').hidden = false; refresh(false);
 });
-$('forget').addEventListener('click', () => { store.del('pulse_token'); store.del('pulse_cache'); DATA = null; $('main').hidden = true; showSetup(); pill('', 'Not connected'); });
+$('forget').addEventListener('click', () => { store.del('pulse_token'); store.del('pulse_cache'); store.del('pulse_repo'); DATA = null; $('main').hidden = true; showSetup(); pill('', 'Not connected'); });
 $('sync').addEventListener('click', () => { if (store.get('pulse_token')) refresh(true); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && store.get('pulse_token')) refresh(false); });
 window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(() => DATA && render(), 150); });
@@ -460,8 +478,7 @@ function render() {
   (function () {
     const el = $('watchsync'); if (!s.watch_sync_time) { el.hidden = true; return; }
     const [h, m] = s.watch_sync_time.split(':').map(Number);
-    const now = new Date(), madrid = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-    const todayStr = madrid.toISOString().slice(0, 10);
+    const now = new Date(), madrid = new Date(now.toLocaleString('en-US', { timeZone: TZ() }));
     const isToday = s.watch_sync_date === `${madrid.getFullYear()}-${String(madrid.getMonth() + 1).padStart(2, '0')}-${String(madrid.getDate()).padStart(2, '0')}`;
     const hrs = isToday ? (madrid.getHours() * 60 + madrid.getMinutes() - (h * 60 + m)) / 60 : 99;
     el.hidden = false; el.className = 'warnline' + (hrs > 2 ? ' stale' : '');
@@ -498,8 +515,9 @@ function render() {
   }));
 }
 
+const TZ = () => (DATA && DATA.status && DATA.status[0] && DATA.status[0].timezone) || 'Europe/Madrid';
 function madridToday() {
-  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   return p; // YYYY-MM-DD
 }
 // ---------- pages
@@ -542,7 +560,8 @@ function compliance(day, act, date, today) {
 const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')} h` : `${Math.round(m)} min`);
 function renderTraining(plan, daily, runs) {
   $('todaylink').hidden = !plan; $('tabbar').hidden = false;
-  if (!plan) { $('pg-training').replaceChildren(Object.assign(document.createElement('p'), { className: 'note', textContent: 'No training plan loaded yet.' })); return; }
+  $('tp-empty').hidden = !!plan; [...$('pg-training').children].forEach((c) => { if (c.id !== 'tp-empty') c.hidden = !plan; });
+  if (!plan) return;
   const today = madridToday(), td = D(today), dow = ((td.getUTCDay() + 6) % 7) + 1;
   const monday = new Date(td.getTime() - (dow - 1) * 864e5);
   const iso = (d) => d.toISOString().slice(0, 10);
@@ -776,7 +795,7 @@ function effChart(el, rows) {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 try { const c = store.get('pulse_cache'); if (c) { DATA = JSON.parse(c); render(); } } catch {}
 if (!window.d3) { pill('err', 'Offline'); }
-else if (!store.get('pulse_token')) { showSetup(); pill('', 'Not connected'); }
+else if (!store.get('pulse_token') || !REPO) { showSetup(); pill('', 'Not connected'); }
 else refresh(false);
 </script>
 </body>
